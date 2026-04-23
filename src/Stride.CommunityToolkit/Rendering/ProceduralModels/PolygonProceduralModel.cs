@@ -15,10 +15,32 @@ public class PolygonProceduralModel : PrimitiveProceduralModelBase
 
     private static readonly Dictionary<string, GeometricMeshData<VertexPositionNormalTexture>> _meshCache = [];
 
+    public float Radius { get; set; } = 0.5f;
+    public int Sides { get; set; } = 6;
+
     /// <inheritdoc />
     protected override GeometricMeshData<VertexPositionNormalTexture> CreatePrimitiveMeshData()
     {
-        return New(Vertices, UvScale.X, UvScale.Y);
+        if (Vertices.Length >= 3)
+            return New(Vertices, UvScale.X, UvScale.Y);
+
+        return New(GenerateRegularPolygonVertices(Radius, Sides), UvScale.X, UvScale.Y);
+    }
+
+    public static Vector2[] GenerateRegularPolygonVertices(float radius, int sides)
+    {
+        if (sides < 3) throw new ArgumentOutOfRangeException(nameof(sides), "Sides must be >= 3");
+
+        var verts = new Vector2[sides];
+        float angleStep = MathF.Tau / sides;
+
+        for (int i = 0; i < sides; i++)
+        {
+            float angle = i * angleStep - MathF.PI / 2; // start at top
+            verts[i] = new Vector2(MathF.Cos(angle) * radius, MathF.Sin(angle) * radius);
+        }
+
+        return verts;
     }
 
     // Helper methods for common shapes
