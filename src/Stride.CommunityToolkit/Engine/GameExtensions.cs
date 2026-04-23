@@ -137,20 +137,6 @@ public static class GameExtensions
 
         game.SceneSystem.GraphicsCompositor = graphicsCompositor;
 
-        if (clearColor.HasValue)
-        {
-            var forwardRenderer = ((graphicsCompositor.Game as SceneCameraRenderer)
-                    ?.Child as SceneRendererCollection)
-                ?.Children
-                .OfType<ForwardRenderer>()
-                .FirstOrDefault();
-
-            if (forwardRenderer?.Clear is ClearRenderer clearRenderer)
-            {
-                clearRenderer.Color = clearColor ?? Color.CornflowerBlue;
-            }
-        }
-
         return graphicsCompositor;
     }
 
