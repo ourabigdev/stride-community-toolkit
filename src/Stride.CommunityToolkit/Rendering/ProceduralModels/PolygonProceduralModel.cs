@@ -13,10 +13,17 @@ public class PolygonProceduralModel : PrimitiveProceduralModelBase
     /// </summary>
     public Vector2[] Vertices { get; set; } = [];
 
-    private static readonly Dictionary<string, GeometricMeshData<VertexPositionNormalTexture>> _meshCache = [];
-
+    /// <summary>
+    /// Circumradius of the regular polygon. Used when <see cref="Vertices"/> is empty.
+    /// </summary>
     public float Radius { get; set; } = 0.5f;
+
+    /// <summary>
+    /// Number of sides of the regular polygon (minimum 3). Used when <see cref="Vertices"/> is empty.
+    /// </summary>
     public int Sides { get; set; } = 6;
+
+    private static readonly Dictionary<string, GeometricMeshData<VertexPositionNormalTexture>> _meshCache = [];
 
     /// <inheritdoc />
     protected override GeometricMeshData<VertexPositionNormalTexture> CreatePrimitiveMeshData()
@@ -27,23 +34,25 @@ public class PolygonProceduralModel : PrimitiveProceduralModelBase
         return New(GenerateRegularPolygonVertices(Radius, Sides), UvScale.X, UvScale.Y);
     }
 
+    /// <summary>
+    /// Generates vertices for a regular polygon centered at the origin.
+    /// </summary>
     public static Vector2[] GenerateRegularPolygonVertices(float radius, int sides)
     {
         if (sides < 3) throw new ArgumentOutOfRangeException(nameof(sides), "Sides must be >= 3");
 
-        var verts = new Vector2[sides];
-        float angleStep = MathF.Tau / sides;
+        var vertices = new Vector2[sides];
+        var angleStep = MathF.Tau / sides;
 
-        for (int i = 0; i < sides; i++)
+        for (var i = 0; i < sides; i++)
         {
-            float angle = i * angleStep - MathF.PI / 2; // start at top
-            verts[i] = new Vector2(MathF.Cos(angle) * radius, MathF.Sin(angle) * radius);
+            var angle = i * angleStep - MathF.PI / 2; // start at top
+            vertices[i] = new Vector2(MathF.Cos(angle) * radius, MathF.Sin(angle) * radius);
         }
 
-        return verts;
+        return vertices;
     }
 
-    // Helper methods for common shapes
     /// <summary>
     /// Convenience factory for an isosceles triangle centered at the origin.
     /// </summary>
@@ -53,9 +62,9 @@ public class PolygonProceduralModel : PrimitiveProceduralModelBase
         {
             Vertices =
             [
-                new (0, size.Y / 2),
-                new (-size.X / 2, -size.Y / 2),
-                new (size.X / 2, -size.Y / 2)
+                new(0, size.Y / 2),
+                new(-size.X / 2, -size.Y / 2),
+                new(size.X / 2, -size.Y / 2)
             ]
         };
     }
@@ -69,10 +78,10 @@ public class PolygonProceduralModel : PrimitiveProceduralModelBase
         {
             Vertices =
             [
-                new (-size.X / 2, -size.Y / 2),
-                new (-size.X / 2, size.Y / 2),
-                new (size.X / 2, size.Y / 2),
-                new (size.X / 2, -size.Y / 2)
+                new(-size.X / 2, -size.Y / 2),
+                new(-size.X / 2, size.Y / 2),
+                new(size.X / 2, size.Y / 2),
+                new(size.X / 2, -size.Y / 2)
             ]
         };
     }
@@ -83,11 +92,8 @@ public class PolygonProceduralModel : PrimitiveProceduralModelBase
     public static GeometricMeshData<VertexPositionNormalTexture> New(Vector2[] vertices, float uScale = 1.0f, float vScale = 1.0f, bool toLeftHanded = false)
     {
         if (vertices.Length < 3)
-        {
             throw new ArgumentException("A polygon must have at least 3 vertices", nameof(vertices));
-        }
 
-        // Create hash for cache key
         var hash = string.Join(",", vertices.Select(v => $"{v.X},{v.Y}"));
         var cacheKey = $"{hash}_{uScale}_{vScale}_{toLeftHanded}";
 
@@ -107,24 +113,17 @@ public class PolygonProceduralModel : PrimitiveProceduralModelBase
     {
         int vertexCount = points.Length;
 
-        // For simple triangulation, we'll use a fan approach
-        // This only works reliably for convex polygons
         Span<VertexPositionNormalTexture> vertices = new VertexPositionNormalTexture[vertexCount];
         Span<int> indices = new int[(vertexCount - 2) * 3];
 
-        // Calculate centroid for UV mapping
         Vector2 centroid = Vector2.Zero;
         foreach (var point in points)
-        {
             centroid += point;
-        }
 
         centroid /= vertexCount;
 
-        // Create vertices
         for (int i = 0; i < vertexCount; i++)
         {
-            // Normalize UV coordinates based on position relative to centroid and bounds
             Vector2 relativePos = points[i] - centroid;
 
             Vector2 uv = new(
@@ -139,12 +138,12 @@ public class PolygonProceduralModel : PrimitiveProceduralModelBase
             );
         }
 
-        // Create triangle indices (fan triangulation)
+        // Fixed winding order
         for (var i = 0; i < vertexCount - 2; i++)
         {
             indices[i * 3] = 0;
-            indices[i * 3 + 1] = i + 1;
-            indices[i * 3 + 2] = i + 2;
+            indices[i * 3 + 1] = i + 2;
+            indices[i * 3 + 2] = i + 1;
         }
 
         return new GeometricMeshData<VertexPositionNormalTexture>(vertices.ToArray(), indices.ToArray(), toLeftHanded) { Name = "Polygon" };
